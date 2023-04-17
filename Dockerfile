@@ -6,7 +6,8 @@ ENV TZ=US \
 
 RUN apt-get update && \
         apt-get install -y --no-install-recommends \
-        software-properties-common && \
+        software-properties-common \
+        sudo && \
     add-apt-repository ppa:deadsnakes/ppa && apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -21,21 +22,25 @@ RUN apt-get update && \
 
 RUN \
     apt-get install -y --no-install-recommends \
-        python3.9 \
-        python3-pip \
-        python3.9-dev \
-        libpython3.9-dev
+        python3.8 \
+        python3.8-dev \
+        libpython3.8-dev \
+        python3.8-distutils \
+        python3-pip 
 
-ENV CFLAGS="-I/usr/include/python3.9"
+# make python3.8 the default python3
+RUN ln -sf /usr/bin/python3.8 /usr/bin/python3
+
+ENV CFLAGS="-I/usr/include/python3.8 -lpython3.8"
 
 # Setup JAVA_HOME -- useful for docker commandline
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64/
 RUN export JAVA_HOME
 
-RUN \
-    pip3 install pybind11 && \
-    pip3 install setuptools && \
-    pip3 install duckdb==0.7.1
+RUN python3.8 -m pip install --upgrade pip setuptools distlib wheel
+RUN python3.8 -m pip install pybind11 
+RUN python3.8 -m pip install setuptools 
+RUN python3.8 -m pip install duckdb==0.7.1
 
 RUN rm -rf /var/lib/apt/lists/*
 
@@ -51,14 +56,9 @@ RUN cp -r ldbc_graphalytics_platforms_graphblas/example-data-sets/graphs /cuda-g
 COPY ./device_tests /cuda-graph-analytics/device_tests
 
 # configure the repository just downloaded
-# install sudo for the following commands
-RUN apt-get update && apt-get install -y sudo
 RUN cd ldbc_graphalytics && scripts/install-local.sh
 RUN cd ldbc_graphalytics_platforms_graphblas && bin/sh/install-graphblas.sh 
 RUN cd ldbc_graphalytics_platforms_graphblas && bin/sh/install-lagraph.sh
-
-RUN cd ldbc_graphalytics_platforms_graphblas && \
-    scripts/init.sh /cuda-graph-analytics/example-data-sets/graphs /cuda-graph-analytics/example-data-sets/matrices
 
 
 
